@@ -1,1 +1,0 @@
-# urfu_project_2
