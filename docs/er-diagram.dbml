@@ -1,0 +1,72 @@
+Table audit_log {
+  id bigint [pk]
+  occurred_at timestamptz
+  action varchar
+  entity_type varchar
+  entity_id bigint
+  detaild jsonb
+}
+
+Table client {
+  id bigint [pk]
+  name varchar
+}
+
+Table faas_function {
+  id bigint [pk]
+  client_id bigint [ref: > client.id]
+  tariff_id bigint [ref: > tariff.id]
+  name varchar
+}
+
+Table metric {
+  id bigint [pk]
+  event_id varchar [unique]
+  function_id bigint [ref: > faas_function.id]
+  occurred_at timestamptz
+  received_at timestamptz
+  duration_ms bigint
+  memory_mb bigint
+  is_cold_start boolean
+  calls_count bigint
+}
+
+Table tariff {
+  id bigint [pk]
+  name varchar
+}
+
+Table tariff_version {
+  id bigint [pk]
+  tariff_id bigint [ref: > tariff.id]
+  version_number int
+  valid_from timestamptz
+  valid_to timestamptz
+  price_per_call numeric
+  price_per_ms numeric
+  price_per_gb_second numeric
+  cold_start_surcharge numeric
+}
+
+Table invoice {
+  id bigint [pk]
+  client_id bigint [ref: > client.id]
+  period_start timestamptz
+  period_end timestamptz
+  created_at timestamptz
+  total_amount numeric
+}
+
+Table invoice_item {
+  id bigint [pk]
+  invoice_id bigint [ref: > invoice.id]
+  function_id bigint [ref: > faas_function.id]
+  tarrif_version_id bigint [ref: > tariff_version.id]
+  calls_count bigint
+  total_duraction_ms bigint
+  resource_gb_second numeric
+  calls_cost numeric
+  time_cost numeric
+  resource_cost numeric
+  total_cost numeric
+}
