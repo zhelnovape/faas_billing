@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FaaS Billing</title><link rel="stylesheet" href="/style.css?v=20261117">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="#dashboard"><span class="brand-mark">F</span><span>FaaS Billing</span></a>
+      <nav id="nav">
+        <button class="nav-item active" data-page="dashboard">Дашборд</button>
+        <button class="nav-item" data-page="billing">Детализация счёта</button>
+        <button class="nav-item" data-page="events">События</button>
+        <button class="nav-item" data-page="functions">Функции</button>
+      </nav>
+      <div class="sidebar-foot">Демо-данные · API<br><span>Макет интерфейса</span></div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div><h1 id="page-title">Дашборд</h1><p id="page-subtitle">Потребление функций и оценка счёта</p></div>
+        <div class="top-actions"><label class="visually-hidden" for="role">Режим</label><select id="role" class="compact"><option>Оператор</option><option>Клиент</option></select><span class="client-pill" id="current-client">Клиент</span></div>
+      </header>
+      <div id="message" class="message" hidden></div>
+
+      <section class="page" id="page-dashboard">
+        <div class="filters"><select id="client-filter" aria-label="Клиент"></select><select id="period-filter" aria-label="Период"><option value="month">Текущий месяц</option><option value="all">За всё время</option></select><select id="function-filter" aria-label="Функция"><option value="">Все функции</option></select><button class="button" id="reset-filters">Сбросить</button><a href="#" class="tariff-link" id="tariff-link">Тариф API →</a></div>
+        <div class="status-strip"><span>●</span><span id="refresh-status">Данные из API · обновление вручную</span><button class="button small" id="refresh">Обновить</button></div>
+        <div class="kpis">
+          <article class="kpi"><span>Стоимость · оценка <i title="Расчёт по тарифу API">ⓘ</i></span><strong id="kpi-cost">—</strong><small>По выбранному периоду</small></article>
+          <article class="kpi"><span>Вызовы</span><strong id="kpi-calls">—</strong><small>Сумма calls_count</small></article>
+          <article class="kpi"><span>Среднее время</span><strong id="kpi-duration">—</strong><small>По событиям API</small></article>
+          <article class="kpi"><span>Доля cold start</span><strong id="kpi-cold">—</strong><small id="kpi-cold-count">—</small></article>
+          <article class="kpi"><span>Функции</span><strong id="kpi-functions">—</strong><small>В выбранном клиенте</small></article>
+        </div>
+        <div class="dashboard-grid">
+          <article class="panel chart-panel"><div class="panel-heading"><div><h2>Вызовы по времени</h2><p>Количество вызовов по последним событиям</p></div><span class="chart-legend">Вызовы</span></div><div class="chart" id="chart" aria-label="График вызовов"></div></article>
+          <article class="panel composition"><h2>Состав счёта</h2><div class="bill-lines" id="bill-lines"></div><button class="button full" data-go="billing">Открыть детализацию →</button></article>
+        </div>
+        <article class="panel"><h2>Функции с наибольшей стоимостью</h2><p class="panel-note">По тарифам и данным API · нажмите функцию, чтобы отфильтровать</p><div class="table-wrap"><table id="cost-table"></table></div><p class="footnote">—: данных недостаточно для показателя. Стоимость рассчитана сервером.</p></article>
+      </section>
+
+      <section class="page" id="page-billing" hidden>
+        <div class="page-controls"><select id="billing-function" aria-label="Функция"></select><button class="button" id="billing-csv">Экспорт CSV (позже)</button></div>
+        <article class="panel"><div class="panel-heading"><h2 id="billing-title">Предварительный расчёт</h2><span class="tag">По API</span></div><div class="table-wrap"><table id="billing-table"></table></div><div class="total-row"><strong>Итого по оплате</strong><strong id="billing-total">—</strong></div><p class="footnote">Суммы получены из /billing и учитывают тариф выбранной функции.</p><button class="button" data-go="explanation">Как это считается →</button></article>
+        <article class="panel"><h2>Разбивка по функциям</h2><p class="panel-note">Статистика вызовов доступна из API; детализация стоимости — по выбранной функции.</p><div class="table-wrap"><table id="function-breakdown"></table></div></article>
+        <article class="panel" id="explanation"><h2>Как это считается</h2><p>Стоимость включает вызовы, длительность, ресурсы (ГБ·с) и доплату за cold start согласно тарифу функции.</p><p class="panel-note">Бесплатные лимиты и версия тарифа на историческую дату в текущем API не реализованы.</p></article>
+      </section>
+
+      <section class="page" id="page-events" hidden>
+        <div class="page-controls"><select id="events-function" aria-label="Фильтр по функции"></select><button class="button" id="events-refresh">Обновить события</button></div>
+        <article class="panel"><div class="panel-heading"><div><h2>События</h2><p class="panel-note">Последние события выполнения из API</p></div></div><div class="table-wrap"><table id="events-table"></table></div></article>
+        <details class="panel"><summary>Отправить событие вручную</summary><form id="form-metric" class="form-grid">
+          <label>Функция<select name="function_id" required></select></label><label>event_id<input name="event_id" required></label><label>Время события<input name="occurred_at" type="datetime-local" required></label><label>Длительность, мс<input name="duration_ms" type="number" min="0" value="245" required></label><label>Память, МБ<input name="memory_mb" type="number" min="1" value="256" required></label><label>Вызовы<input name="calls_count" type="number" min="1" value="1" required></label><label class="check"><input name="is_cold_start" type="checkbox"> Холодный запуск</label><button class="button primary">Отправить событие</button><button type="button" class="button" id="btn-demo">Создать 10 демо-событий</button></form></details>
+      </section>
+
+      <section class="page" id="page-functions" hidden>
+        <div class="page-controls"><button class="button primary" id="show-create">Создать функцию</button><button class="button" data-go="connect">Подключить функцию →</button></div>
+        <article class="panel"><div class="table-wrap"><table id="functions-table"></table></div></article>
+        <article class="panel"><h2>Состояния функции</h2><p>● Активна · состояние рассчитывается по наличию событий.</p><p class="panel-note">Создание функций и назначение тарифов доступны оператору через API.</p></article>
+        <article class="panel" id="create-panel" hidden><h2>Новая функция</h2><form id="form-function" class="form-grid"><label>Клиент<select name="client_id" required></select></label><label>Тариф<select name="tariff_id" required></select></label><label>Имя функции<input name="name" required maxlength="255"></label><button class="button primary">Создать функцию</button><button type="button" class="button" id="cancel-create">Отмена</button></form></article>
+        <details class="panel"><summary>Настройки учётных записей и тарифов</summary><div class="admin-grid">
+          <form id="form-client" class="form-grid"><h2>Добавить клиента</h2><label>Название клиента<input name="name" maxlength="255" required></label><button class="button primary">Создать клиента</button></form>
+          <form id="form-tariff" class="form-grid"><h2>Добавить тариф</h2><label>Название тарифа<input name="name" required></label><label>Цена за вызов<input name="price_per_call" type="number" step="any" min="0" value="0.0000002" required></label><label>Цена за мс<input name="price_per_ms" type="number" step="any" min="0" value="0.0000001" required></label><label>Цена за ГБ·с<input name="price_per_gb_second" type="number" step="any" min="0" value="0.0000166" required></label><label>Доплата cold start<input name="cold_start_surcharge" type="number" step="any" min="0" value="0.00001" required></label><button class="button primary">Создать тариф</button></form>
+        </div></details>
+        <article class="panel" id="connect"><h2>Подключить функцию</h2><p>Ключ интеграции и автоматическая проверка подключения пока недоступны в API.</p><div class="placeholder-box">POST /api/v1/metrics · отправка события доступна на вкладке «События»</div></article>
+      </section>
+      <footer>Данные отображаются из подключённого API · FaaS Billing</footer>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
