@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-faas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-faas}
+      POSTGRES_DB: ${POSTGRES_DB:-faas_billing}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432" # можно убрать, если не нужен доступ к БД с хоста
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_NAME: "FaaS Billing"
+      DEBUG: "false"
+      MAX_BATCH_SIZE: "1000"
+      # хост БД внутри docker-сети — имя сервиса "db"
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-faas}:${POSTGRES_PASSWORD:-faas}@db:5432/${POSTGRES_DB:-faas_billing}
+    ports:
+      - "8000:8000" # Swagger: http://localhost:8000/docs
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80" # UI: http://localhost:3000
+
+volumes:
+  pgdata:
