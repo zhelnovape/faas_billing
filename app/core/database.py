@@ -1,9 +1,11 @@
 from collections.abc import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import BigInteger, Integer, create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.core.config import get_settings
+
+BigIntPK = BigInteger().with_variant(Integer(), "sqlite")
 
 
 class Base(DeclarativeBase):
